@@ -15,13 +15,8 @@ on:
         type: string
 
 env:
-  MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
-  MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
-  MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
-  MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
-  PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
-  PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
-  PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+  # No Developer ID certificate is configured: sign ad hoc, do not notarize
+  MACOS_AD_HOC_SIGNING: 1
 
 jobs:
   retrieve-resources:
@@ -29,7 +24,7 @@ jobs:
     runs-on: ${{ inputs.os }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Cleanup Android Related Stuff
@@ -41,7 +36,7 @@ jobs:
       - name: Disable Spotlight
         run: sudo mdutil -a -i off
       - name: Setup Python 3.13 (latest for depot_tools to work)
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: Setup Environment and Toolchain
@@ -53,10 +48,11 @@ jobs:
       - name: Archive resources
         run: ./github_pack_resources.sh | tee -a github_actions_retrieve_resources.log
       - name: Upload resources
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ungoogled_chromium_macos_resources_${{ inputs.arch }}
           path: upload_build_resources/
+          retention-days: 5
 
   build_job_01:
     name: Start Building Ungoogled-Chromium for macOS
@@ -66,7 +62,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -82,7 +78,7 @@ jobs:
       - name: Setup Environment and Toolchain
         run: ./github_setup_env_toolchain.sh ${{ inputs.arch }} | tee -a github_actions_setup_env_toolchain.log
       - name: Download resources
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ungoogled_chromium_macos_resources_${{ inputs.arch }}
       - name: Unpack resources
@@ -98,20 +94,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -127,7 +124,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -141,11 +138,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -159,20 +156,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -188,7 +186,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -202,11 +200,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -220,20 +218,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -249,7 +248,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -263,11 +262,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -281,20 +280,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -310,7 +310,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -324,11 +324,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -342,20 +342,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -371,7 +372,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -385,11 +386,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -403,20 +404,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -432,7 +434,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -446,11 +448,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -464,20 +466,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -493,7 +496,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -507,11 +510,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -525,20 +528,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -554,7 +558,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -568,11 +572,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -586,20 +590,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -615,7 +620,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -629,11 +634,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -647,20 +652,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -676,7 +682,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -690,11 +696,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -708,20 +714,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -737,7 +744,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -751,11 +758,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -769,20 +776,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -798,7 +806,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -812,11 +820,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -830,20 +838,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -859,7 +868,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -873,11 +882,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -891,20 +900,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -920,7 +930,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -934,11 +944,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -952,20 +962,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -981,7 +992,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -995,11 +1006,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -1013,20 +1024,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -1042,7 +1054,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -1056,11 +1068,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -1074,20 +1086,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -1103,7 +1116,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -1117,11 +1130,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -1135,20 +1148,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -1164,7 +1178,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -1178,11 +1192,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -1196,20 +1210,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
@@ -1225,7 +1240,7 @@ jobs:
       status: ${{ steps.build.outputs.status }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
       - name: Log Start Timestamp
@@ -1239,11 +1254,11 @@ jobs:
       - name: Disable spotlight
         run: sudo mdutil -a -i off
       - name: Get previous logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_logs_${{ inputs.arch }}
       - name: Download resumed build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: github_build_artifact_${{ inputs.arch }}
       - name: Setup Environment and Toolchain
@@ -1257,20 +1272,21 @@ jobs:
         id: bake
         run: ./github_prepare_artifacts.sh ${{ inputs.arch }} | tee -a github_actions_upload_${{ inputs.arch }}.log
       - name: Upload part build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: github_build_logs_${{ inputs.arch }}
           path: upload_logs/
           overwrite: true
       - name: Upload disk-image and hash file as artifact after build
         if: ${{ steps.build.outputs.status == 'finished' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.bake.outputs.file_name }}
           path: |
