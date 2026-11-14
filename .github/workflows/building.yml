@@ -15,13 +15,8 @@ on:
         type: string
 
 env:
-  MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
-  MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
-  MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
-  MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
-  PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
-  PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
-  PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+  # No Developer ID certificate is configured: sign ad hoc, do not notarize
+  MACOS_AD_HOC_SIGNING: 1
 
 jobs:
   retrieve-resources:
@@ -57,6 +52,7 @@ jobs:
         with:
           name: ungoogled_chromium_macos_resources_${{ inputs.arch }}
           path: upload_build_resources/
+          retention-days: 5
 
   build_job_01:
     name: Start Building Ungoogled-Chromium for macOS
@@ -103,6 +99,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -165,6 +162,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -227,6 +225,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -289,6 +288,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -351,6 +351,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -413,6 +414,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -475,6 +477,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -537,6 +540,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -599,6 +603,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -661,6 +666,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -723,6 +729,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -785,6 +792,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -847,6 +855,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -909,6 +918,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -971,6 +981,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -1033,6 +1044,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -1095,6 +1107,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -1157,6 +1170,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -1219,6 +1233,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
@@ -1281,6 +1296,7 @@ jobs:
           name: github_build_artifact_${{ inputs.arch }}
           path: upload_part_build/
           overwrite: true
+          retention-days: 5
       - name: Upload logs
         uses: actions/upload-artifact@v7
         with:
