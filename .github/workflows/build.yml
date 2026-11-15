@@ -1,9 +1,22 @@
 name: Build macOS binaries of FacetBrowser Engine
 on:
   workflow_dispatch:
+    inputs:
+      resume_run_id:
+        description: Continue from the build artifact of this run id instead of starting from scratch
+        type: string
+        required: false
+        default: ''
+      ninja_jobs:
+        description: Compilers to run at once (the runner has 3 cores and 7 GB of memory)
+        type: string
+        required: false
+        default: '3'
 
 permissions:
   contents: read
+  # To download the build artifact of the run that is continued
+  actions: read
 
 concurrency:
   group: build-${{ github.ref }}
@@ -17,3 +30,5 @@ jobs:
       arch: arm64
       # GitHub's own Apple Silicon runner; upstream builds on Depot
       os: macos-26
+      resume_run_id: ${{ inputs.resume_run_id }}
+      ninja_jobs: ${{ inputs.ninja_jobs }}
