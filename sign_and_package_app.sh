@@ -27,7 +27,21 @@ fi
 
 sign() {
   if (( _ad_hoc )); then
-    codesign --sign - --force "$@"
+    # An ad hoc signature has no Team ID. With library validation, which the
+    # hardened runtime also turns on, the app then cannot load its own framework
+    # ("mapping process and mapped file (non-platform) have different Team IDs"),
+    # so the codesign --options are left out.
+    local _args=() _arg _skip=0
+    for _arg in "$@"; do
+      if (( _skip )); then
+        _skip=0
+      elif [[ "$_arg" == --options ]]; then
+        _skip=1
+      elif [[ "$_arg" != --options=* ]]; then
+        _args+=("$_arg")
+      fi
+    done
+    codesign --sign - --force "${_args[@]}"
   else
     codesign --sign "$MACOS_CERTIFICATE_NAME" --force --timestamp "$@"
   fi
@@ -44,6 +58,7 @@ warning() {
 # Fix issue where macOS requests permission for incoming network connections
 # See https://github.com/ungoogled-software/ungoogled-chromium-macos/issues/17
 xattr -cs "$_app"
+xattr -cr "$_app"
 
 # Sign the binary
 sign --identifier chrome_crashpad_handler --options=restrict,library,runtime,kill "$_helpers/chrome_crashpad_handler"
@@ -106,6 +121,11 @@ for _framework_dylib in "$_libraries"/*.dylib; do
 done
 
 codesign --verify --deep --strict --verbose=4 "$_app"
+
+# The app must be able to start the way it is signed
+if (( _ad_hoc )); then
+  "$_app/Contents/MacOS/Chromium" --version
+fi
 
 # Check that every bundle is signed with its own bundle identifier
 verify_identifier() {
