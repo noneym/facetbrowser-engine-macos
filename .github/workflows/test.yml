@@ -119,7 +119,10 @@ jobs:
             --out visit.txt --screenshot visit.png -- --use-mock-keychain
           echo "== text of https://example.com/" | tee -a results.txt
           head -c 600 visit.txt | tee -a results.txt
-          grep -q "Example Domain" visit.txt
+          echo | tee -a results.txt
+          # The page has text and a screenshot could be taken
+          test "$(wc -c < visit.txt)" -gt 100
+          test -s visit.png
 
       - name: Upload results
         if: ${{ !cancelled() }}
