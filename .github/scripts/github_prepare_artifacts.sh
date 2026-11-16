@@ -19,23 +19,31 @@ if [[ -f "$_root_dir/build_finished_$_target_cpu.log" ]] ; then
   cd "$_src_dir"
 
   xattr -cs out/Default/Chromium.app
+  xattr -cr out/Default/Chromium.app
 
-  # Sign the binary ad hoc: there is no Developer ID certificate here
-  codesign --sign - --force --identifier chrome_crashpad_handler --options=restrict,library,runtime,kill out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/chrome_crashpad_handler
-  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium.helper --options restrict,library,runtime,kill out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/Chromium\ Helper.app
-  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium.helper.renderer --options restrict,kill,runtime --entitlements $_root_dir/entitlements/helper-renderer-entitlements.plist out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/Chromium\ Helper\ \(Renderer\).app
-  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium.helper --options restrict,kill,runtime --entitlements $_root_dir/entitlements/helper-gpu-entitlements.plist out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/Chromium\ Helper\ \(GPU\).app
-  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium.framework.AlertNotificationService --options restrict,library,runtime,kill out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/Chromium\ Helper\ \(Alerts\).app
-  codesign --sign - --force --identifier app_mode_loader --options restrict,library,runtime,kill out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/app_mode_loader
-  codesign --sign - --force --identifier web_app_shortcut_copier --options restrict,library,runtime,kill out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/web_app_shortcut_copier
+  # Sign the binary ad hoc: there is no Developer ID certificate here.
+  # An ad hoc signature has no Team ID. With library validation, which the
+  # hardened runtime also turns on, the app then cannot load its own framework
+  # ("mapping process and mapped file (non-platform) have different Team IDs"),
+  # so the codesign --options are left out.
+  codesign --sign - --force --identifier chrome_crashpad_handler out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/chrome_crashpad_handler
+  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium.helper out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/Chromium\ Helper.app
+  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium.helper.renderer --entitlements $_root_dir/entitlements/helper-renderer-entitlements.plist out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/Chromium\ Helper\ \(Renderer\).app
+  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium.helper --entitlements $_root_dir/entitlements/helper-gpu-entitlements.plist out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/Chromium\ Helper\ \(GPU\).app
+  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium.framework.AlertNotificationService out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/Chromium\ Helper\ \(Alerts\).app
+  codesign --sign - --force --identifier app_mode_loader out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/app_mode_loader
+  codesign --sign - --force --identifier web_app_shortcut_copier out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Helpers/web_app_shortcut_copier
   codesign --sign - --force --identifier libEGL out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Libraries/libEGL.dylib
   codesign --sign - --force --identifier libGLESv2 out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Libraries/libGLESv2.dylib
   codesign --sign - --force --identifier libvk_swiftshader out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework/Libraries/libvk_swiftshader.dylib
   codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium.framework out/Default/Chromium.app/Contents/Frameworks/Chromium\ Framework.framework
-  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium --options restrict,library,runtime,kill --entitlements $_root_dir/entitlements/app-entitlements.plist out/Default/Chromium.app
+  codesign --sign - --force --identifier io.ungoogled-software.ungoogled-chromium --entitlements $_root_dir/entitlements/app-entitlements.plist out/Default/Chromium.app
 
   # Verify the binary signature
   codesign --verify --deep --verbose=4 out/Default/Chromium.app
+
+  # The app must be able to start the way it is signed
+  out/Default/Chromium.app/Contents/MacOS/Chromium --version
 
   # Package the app
   chrome/installer/mac/pkg-dmg \
