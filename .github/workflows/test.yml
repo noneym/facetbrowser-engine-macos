@@ -1,0 +1,112 @@
+name: Test a macOS build of FacetBrowser Engine
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Run id of the build whose dmg is tested
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  # To download the dmg of another run
+  actions: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: Run on macOS (arm64)
+    runs-on: macos-26
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download the dmg
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ungoogled-chromium_*-macos.dmg
+          merge-multiple: true
+          path: download
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Copy the app out of the dmg
+        run: |
+          ls -la download
+          shasum -a 256 download/*.dmg | tee results.txt
+          hdiutil attach -nobrowse -readonly -mountpoint "$PWD/mnt" download/*.dmg
+          ls -la mnt
+          mkdir engine
+          cp -R mnt/Chromium.app engine/
+          hdiutil detach "$PWD/mnt"
+          du -sh engine/Chromium.app | tee -a results.txt
+
+      - name: Architecture and signature
+        run: |
+          app=engine/Chromium.app
+          echo "== architecture" | tee -a results.txt
+          lipo -archs "$app/Contents/MacOS/Chromium" | tee -a results.txt
+          echo "== signature" | tee -a results.txt
+          codesign -dv --verbose=2 "$app" 2>&1 | tee -a results.txt || true
+          echo "== codesign --verify --deep --strict" | tee -a results.txt
+          if codesign --verify --deep --strict "$app" 2>&1 | tee -a results.txt; then
+            echo "signature verifies" | tee -a results.txt
+          fi
+          echo "== Gatekeeper assessment (a build that is not notarized is rejected)" | tee -a results.txt
+          spctl -a -vv "$app" 2>&1 | tee -a results.txt || true
+          echo "== minimum macOS" | tee -a results.txt
+          /usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist" | tee -a results.txt
+          sw_vers | tee -a results.txt
+
+      - name: Version
+        run: engine/Chromium.app/Contents/MacOS/Chromium --version | tee -a results.txt
+
+      - name: Fingerprint probe
+        run: |
+          curl -fsSL -o probe.mjs https://raw.githubusercontent.com/noneym/facetbrowser-engine/main/facet/fingerprint_probe.mjs
+          exe="$PWD/engine/Chromium.app/Contents/MacOS/Chromium"
+          # The mock keychain keeps the "Chromium Safe Storage" prompt away
+          set -- --use-mock-keychain
+          node probe.mjs run --exe "$exe" --platform macos --seed 1000 --stress 50 --out seed1000-a.json -- "$@"
+          node probe.mjs run --exe "$exe" --platform macos --seed 1000 --out seed1000-b.json -- "$@"
+          node probe.mjs run --exe "$exe" --platform macos --seed 2000 --out seed2000.json -- "$@"
+          node probe.mjs run --exe "$exe" --platform windows --seed 1000 --out seed1000-windows.json -- "$@"
+          node probe.mjs run --exe "$exe" --no-fingerprint --out plain.json -- "$@"
+          node probe.mjs run --exe "$exe" --platform macos --seed 1000 --out seed1000-headless.json -- "$@" --headless=new
+          echo "== same seed twice" | tee -a results.txt
+          node probe.mjs diff seed1000-a.json seed1000-b.json | tee -a results.txt || true
+          echo "== seed 1000 against seed 2000" | tee -a results.txt
+          node probe.mjs diff seed1000-a.json seed2000.json | tee -a results.txt || true
+          echo "== seed 1000 as macOS against seed 1000 as Windows" | tee -a results.txt
+          node probe.mjs diff seed1000-a.json seed1000-windows.json | tee -a results.txt || true
+          echo "== seed 1000 against no fingerprint switches" | tee -a results.txt
+          node probe.mjs diff seed1000-a.json plain.json | tee -a results.txt || true
+          echo "== seed 1000 with a window against seed 1000 headless" | tee -a results.txt
+          node probe.mjs diff seed1000-a.json seed1000-headless.json | tee -a results.txt || true
+
+      # Upstream issue 365: on some macOS builds Page.navigate to a real site never finishes
+      - name: Open a real page over the DevTools protocol
+        run: |
+          exe="$PWD/engine/Chromium.app/Contents/MacOS/Chromium"
+          node probe.mjs visit --exe "$exe" --platform macos --seed 1000 --url https://example.com/ --wait 5 \
+            --out visit.txt --screenshot visit.png -- --use-mock-keychain
+          echo "== text of https://example.com/" | tee -a results.txt
+          head -c 600 visit.txt | tee -a results.txt
+          grep -q "Example Domain" visit.txt
+
+      - name: Upload results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            results.txt
+            visit.txt
+            visit.png
+            *.json
+          if-no-files-found: warn
