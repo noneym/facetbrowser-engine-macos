@@ -37,9 +37,11 @@ jobs:
 
       - name: Copy the app out of the dmg
         run: |
-          ls -la download
-          shasum -a 256 download/*.dmg | tee results.txt
-          hdiutil attach -nobrowse -readonly -mountpoint "$PWD/mnt" download/*.dmg
+          # The artifact keeps the folder the dmg was uploaded from
+          dmg="$(find download -name '*.dmg' | head -n 1)"
+          ls -la "$dmg"
+          shasum -a 256 "$dmg" | tee results.txt
+          hdiutil attach -nobrowse -readonly -mountpoint "$PWD/mnt" "$dmg"
           ls -la mnt
           mkdir engine
           cp -R mnt/Chromium.app engine/
