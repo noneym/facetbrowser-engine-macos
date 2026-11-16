@@ -44,7 +44,7 @@ jobs:
           hdiutil attach -nobrowse -readonly -mountpoint "$PWD/mnt" "$dmg"
           ls -la mnt
           mkdir engine
-          cp -R mnt/Chromium.app engine/
+          ditto mnt/Chromium.app engine/Chromium.app
           hdiutil detach "$PWD/mnt"
           du -sh engine/Chromium.app | tee -a results.txt
 
@@ -65,8 +65,28 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist" | tee -a results.txt
           sw_vers | tee -a results.txt
 
-      - name: Version
-        run: engine/Chromium.app/Contents/MacOS/Chromium --version | tee -a results.txt
+      # If the app cannot start the way it is signed in the dmg, the tests go on
+      # with a copy signed again, and the last step fails the run
+      - name: Start the app
+        id: start
+        run: |
+          app=engine/Chromium.app
+          exe="$app/Contents/MacOS/Chromium"
+          echo "== start" | tee -a results.txt
+          if "$exe" --version 2>start-error.txt | tee -a results.txt; then
+            echo "starts as signed in the dmg" | tee -a results.txt
+          else
+            echo "DOES NOT START AS SIGNED IN THE DMG:" | tee -a results.txt
+            head -c 1200 start-error.txt | tee -a results.txt
+            echo | tee -a results.txt
+            echo "== signed again ad hoc, without the hardened runtime" | tee -a results.txt
+            xattr -cr "$app"
+            codesign --force --deep --sign - "$app"
+            codesign -dv --verbose=2 "$app" 2>&1 | tee -a results.txt
+            codesign --verify --deep --strict "$app" 2>&1 | tee -a results.txt
+            "$exe" --version | tee -a results.txt
+            echo "resigned=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Fingerprint probe
         run: |
@@ -112,3 +132,9 @@ jobs:
             visit.png
             *.json
           if-no-files-found: warn
+
+      - name: Fail if the app did not start as signed in the dmg
+        if: ${{ !cancelled() && steps.start.outputs.resigned == 'true' }}
+        run: |
+          echo "::error::The app in the dmg does not start as it is signed; see results.txt"
+          exit 1
