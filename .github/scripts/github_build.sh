@@ -61,7 +61,7 @@ done
 # Nothing is built twice: the objects are part of the normal build.
 _preflight_marker="out/Default/facet_preflight.done"
 if [[ ! -f "$_preflight_marker" ]]; then
-  if ninja -C out/Default -t inputs chrome > "$_root_dir/facet_preflight_inputs.txt"; then
+  if ninja -C out/Default -t inputs chrome chromedriver > "$_root_dir/facet_preflight_inputs.txt"; then
     python3 "$_root_dir/facet_preflight.py" "$_root_dir/ungoogled-chromium/patches" \
       "$_root_dir/facet_preflight_inputs.txt" > "$_root_dir/facet_preflight_targets.txt"
     echo "Preflight: compiling $(wc -l < "$_root_dir/facet_preflight_targets.txt" | tr -d ' ') patched files first"
@@ -82,7 +82,7 @@ if [[ ! -f "$_preflight_marker" ]]; then
     cp "$_root_dir/facet_preflight_targets.txt" "$_preflight_marker"
     echo "Preflight: all patched files compile"
   else
-    echo "Preflight: skipped, could not list the inputs of chrome"
+    echo "Preflight: skipped, could not list the inputs of chrome and chromedriver"
   fi
   rm -f "$_root_dir/facet_preflight_inputs.txt" "$_root_dir/facet_preflight_targets.txt"
 fi

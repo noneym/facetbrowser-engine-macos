@@ -4,10 +4,10 @@ Prints the ninja targets that compile the files changed by the FacetBrowser
 Engine patches, one per line, for github_build.sh to build before anything
 else.
 
-usage: facet_preflight.py <engine patches dir> <file with `ninja -t inputs chrome` output>
+usage: facet_preflight.py <engine patches dir> <file with `ninja -t inputs chrome chromedriver` output>
 
 A patched Blink .idl is represented by the V8 binding generated from it.
-Files that are not an input of chrome on this platform are reported on stderr
+Files that are not an input of either target on this platform are reported on stderr
 and left out.
 """
 
@@ -49,7 +49,7 @@ def main():
         if source in known:
             print(source + '^')
         else:
-            print('Preflight: not an input of chrome, skipped: ' + source, file=sys.stderr)
+            print('Preflight: not an input of chrome or chromedriver, skipped: ' + source, file=sys.stderr)
 
 
 if __name__ == '__main__':
