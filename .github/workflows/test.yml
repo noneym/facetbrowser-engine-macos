@@ -124,6 +124,39 @@ jobs:
           test "$(wc -c < visit.txt)" -gt 100
           test -s visit.png
 
+      # What FacetBrowser passes to a build that has the patches 003 to 006
+      - name: Screen size, device memory and SOCKS5 authentication switches
+        run: |
+          exe="$PWD/engine/Chromium.app/Contents/MacOS/Chromium"
+          node probe.mjs run --exe "$exe" --platform macos --seed 1000 --out switches-macos.json -- --use-mock-keychain \
+            --fingerprint-screen-width=1728 --fingerprint-screen-height=1117 --fingerprint-device-memory=8
+          node probe.mjs run --exe "$exe" --platform windows --seed 1000 --out switches-windows.json -- --use-mock-keychain \
+            --fingerprint-screen-width=1920 --fingerprint-screen-height=1080 --fingerprint-device-memory=4
+          cat > check_switches.cjs <<'EOF'
+          const fs = require('fs')
+          let failed = false
+          for (const [file, width, height, memory] of [['switches-macos.json', 1728, 1117, 8], ['switches-windows.json', 1920, 1080, 4]]) {
+            const page = JSON.parse(fs.readFileSync(file, 'utf8')).page
+            const ok = page.screen.width === width && page.screen.height === height &&
+              page.screen.deviceWidthQuery === true && page.screen.deviceHeightQuery === true &&
+              page.navigator.deviceMemory === memory
+            if (!ok) failed = true
+            console.log(`${file}: wanted ${width}x${height} and ${memory} GB: ${ok ? 'ok' : 'FAILED'}`)
+            console.log(JSON.stringify({ screen: page.screen, deviceMemory: page.navigator.deviceMemory }))
+          }
+          process.exit(failed ? 1 : 0)
+          EOF
+          echo "== screen size and device memory switches" | tee -a results.txt
+          node check_switches.cjs | tee -a results.txt
+
+          # The test starts the browser by itself, so the mock keychain goes in a wrapper
+          curl -fsSL -o socks5_auth_test.mjs https://raw.githubusercontent.com/noneym/facetbrowser-engine/main/facet/socks5_auth_test.mjs
+          cp probe.mjs fingerprint_probe.mjs
+          printf '#!/bin/bash\nexec "%s" --use-mock-keychain "$@"\n' "$exe" > chromium-mock-keychain
+          chmod +x chromium-mock-keychain
+          echo "== SOCKS5 username/password authentication" | tee -a results.txt
+          node socks5_auth_test.mjs "$PWD/chromium-mock-keychain" 2>&1 | tee -a results.txt
+
       - name: Upload results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
